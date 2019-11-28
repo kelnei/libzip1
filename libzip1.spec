@@ -1,8 +1,8 @@
 %global with_tests     0%{!?_without_tests:1}
 
-Name:    libzip
+Name:    libzip1
 Version: 1.5.2
-Release: 2%{?dist}
+Release: 1%{?dist}
 Summary: C library for reading, creating, and modifying zip archives
 
 License: BSD
@@ -13,7 +13,7 @@ BuildRequires:  gcc
 BuildRequires:  zlib-devel
 BuildRequires:  bzip2-devel
 BuildRequires:  openssl-devel
-BuildRequires:  cmake >= 3.0.2
+BuildRequires:  cmake3 >= 3.0.2
 # Needed to run the test suite
 # find regress/ -type f | /usr/lib/rpm/perl.req
 # find regress/ -type f | /usr/lib/rpm/perl.prov
@@ -40,6 +40,8 @@ The API is documented by man pages.
 %package devel
 Summary:  Development files for %{name}
 Requires: %{name}%{?_isa} = %{version}-%{release}
+# https://docs.fedoraproject.org/en-US/packaging-guidelines/Conflicts/#_compat_package_conflicts
+Conflicts: libzip-devel
 
 %description devel
 The %{name}-devel package contains libraries and header files for
@@ -52,20 +54,23 @@ Requires: %{name}%{?_isa} = %{version}-%{release}
 
 %description tools
 The %{name}-tools package provides command line tools split off %{name}:
-- zipcmp
-- zipmerge
-- ziptool
+- %{name}-zipcmp
+- %{name}-zipmerge
+- %{name}-ziptool
 
 
 %prep
-%autosetup -p1
+%autosetup -n libzip-%{version}
 
 # unwanted in package documentation
 rm INSTALL.md
 
+# change cmake invocations to cmake3
+sed -e 's/ cmake / cmake3 /' -i CMakeLists.txt regress/CMakeLists.txt
+
 
 %build
-%cmake \
+%cmake3 \
   -DENABLE_COMMONCRYPTO:BOOL=OFF \
   -DENABLE_GNUTLS:BOOL=OFF \
   -DENABLE_MBEDTLS:BOOL=OFF \
@@ -84,6 +89,14 @@ make %{?_smp_mflags}
 %install
 make install DESTDIR=%{buildroot} INSTALL='install -p'
 
+# rename tools for parallel installation
+mv %{buildroot}%{_bindir}/{,%{name}-}zipcmp
+mv %{buildroot}%{_bindir}/{,%{name}-}zipmerge
+mv %{buildroot}%{_bindir}/{,%{name}-}ziptool
+mv %{buildroot}%{_mandir}/man1/{,%{name}-}zipcmp.1
+mv %{buildroot}%{_mandir}/man1/{,%{name}-}zipmerge.1
+mv %{buildroot}%{_mandir}/man1/{,%{name}-}ziptool.1
+
 
 %check
 %if %{with_tests}
@@ -101,10 +114,12 @@ make check
 %{_libdir}/libzip.so.5*
 
 %files tools
-%{_bindir}/zipcmp
-%{_bindir}/zipmerge
-%{_bindir}/ziptool
-%{_mandir}/man1/zip*
+%{_bindir}/%{name}-zipcmp
+%{_bindir}/%{name}-zipmerge
+%{_bindir}/%{name}-ziptool
+%{_mandir}/man1/%{name}-zipcmp.1*
+%{_mandir}/man1/%{name}-zipmerge.1*
+%{_mandir}/man1/%{name}-ziptool.1*
 
 %files devel
 %doc AUTHORS THANKS *.md
@@ -118,6 +133,9 @@ make check
 
 
 %changelog
+* Thu Nov 28 2019 Carl George <carl@george.computer> - 1.5.2-1
+- Initial libzip1 package based on Fedora's libzip
+
 * Thu Jul 25 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1.5.2-2
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_31_Mass_Rebuild
 
